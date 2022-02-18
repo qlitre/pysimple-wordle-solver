@@ -139,13 +139,41 @@ class Solver:
         self.df = self.df[self.df['char_full'].str.contains(char)]
         self.df = self.df[~self.df[col_name].str.contains(char)]
 
+    @staticmethod
+    def get_optimize_words(words: list):
+        """黄色のヒット率が高い単語順に並べて返す"""
+        optimized_words = []
+        # 単語を総当たりで調べて、黄色がヒットするか調べる
+        for guess in words:
+            cnt = 0
+            for answer in words:
+                # 同じ場合は除く
+                if guess == answer:
+                    continue
+                # 同じ文字はカウントしない
+                already = []
+                for c in guess:
+                    if c in already:
+                        continue
+                    already.append(c)
+                    # 含まれていたらカウントアップ
+                    if c in answer:
+                        cnt += 1
+            optimized_words.append({'word': guess, 'yellow_count': cnt})
+        # ヒット降順で並べる
+        optimized_words.sort(key=lambda x: -x['yellow_count'])
+
+        return [f"{dic['word']}:{dic['yellow_count']}" for dic in optimized_words]
+
     def output_guess(self):
         """答えの候補の出力"""
         # 一旦消す
         self.window['GUESS'].update('')
         # dfから文字リストを取得
         words = list(self.df['char_full'].values)
-        # あんまり多すぎても意味がないので、50単語表示
+        # 黄色の多い順で再取得
+        words = self.get_optimize_words(words)
+        # あんまり多すぎても迷うので、最大50単語表示
         words = words[:50]
         guess = ''
         for word in words:
